@@ -102,3 +102,9 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# user-defined
+.vscode/
+data/
+output/
+outputs/
