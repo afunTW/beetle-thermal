@@ -16,9 +16,9 @@ data/
     ├── path/
     │   └── paths.csv
     └── temp/
-        ├── 1.txt
+        ├── 1.MAT
         ...
-        └── n.txt
+        └── n.MAT
 ```
 
 > It might have multiple video folder under `path/` contains the `paths.csv` for each.
