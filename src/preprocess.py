@@ -5,6 +5,30 @@ import logme
 import pandas as pd
 
 
+def _add_group_id(df: pd.DataFrame, groupby_cols: tuple, gid_colname: str='gid') -> pd.DataFrame:
+    """[summary] add group index by given col
+
+    Arguments:
+        df {pd.DataFrame} -- target dataframe to groupby and add group id
+        groupby_cols {tuple} -- reference column to groupby
+
+    Keyword Arguments:
+        gid_colname {str} -- group index colname (default: {'gid'})
+    
+    Returns:
+        pd.DataFrame -- the DataFrame appended the group id
+    """
+    df_group = df.groupby(groupby_cols).apply(lambda group: pd.Series({
+        'group_length': group.shape[0]
+    })).reset_index()
+    df_group[gid_colname] = df_group.index
+    df_merge = pd.merge(df, df_group, how='outer', on=groupby_cols)
+    df_merge['group_length'] = df_merge['group_length'].fillna(-1)
+    df_merge[gid_colname] = df_merge[gid_colname].fillna(-1)
+    df_merge['group_length'] = df_merge['group_length'].astype(int)
+    df_merge[gid_colname] = df_merge[gid_colname].astype(int)
+    return df_merge
+
 def ms_to_hmsf(ms: float) -> str:
     """[summary] convert milliseconds to hms+microseconds
 
@@ -64,11 +88,13 @@ def get_aggregate_path(*path_files, reverse: bool=False, logger=None) -> pd.Data
         df_one_video_path['frame_idx'] += base_frame_idx
         logger.debug('#%d video, add the base frame idx %d', vid, base_frame_idx)
 
+        # recalc block_idx (action clip index)
+
         # concat the prepared data
         df_paths = pd.concat([df_paths, df_one_video_path])
         df_paths.video_nframes = sum(df_paths.video_nframes.unique())
         logger.debug('#%d video, total nframes %d', vid, df_paths.video_nframes.unique()[0])
-    
+
     # recalc timestamp
     df_paths.timestamp_ms = df_paths.frame_idx / df_paths.video_fps * 1000
     timestamp_hmsf = df_paths.timestamp_ms.apply(ms_to_hmsf)
