@@ -47,7 +47,7 @@ def ms_to_hmsf(milliseconds: float) -> str:
 
 @logme.log
 @profile
-def get_aggregate_path(*path_files, reverse: bool = False, logger = None) -> pd.DataFrame:
+def get_aggregate_path(*path_files, reverse: bool = False, logger=None) -> pd.DataFrame:
     """[summary] aggregate data by rules
 
     - `video_fps` should be all the same
@@ -112,3 +112,41 @@ def get_aggregate_path(*path_files, reverse: bool = False, logger = None) -> pd.
     logger.info('aggregated %d files into the shape %s DataFrame', \
                 len(path_files), str(df_paths.shape))
     return df_paths
+
+@logme.log
+@profile
+def get_downgrade_fps_path(
+    df_path: pd.DataFrame, fps: int = 1,
+    block_threshold: int = 1, logger=None
+) -> pd.DataFrame:
+    """[summary] reduce the path record by fps
+
+    - downgrade by `video_fps`
+    - recalc the `block_idx`
+    - filter if the block is too short after downgrade
+
+    Arguments:
+        df_path {pd.DataFrame} -- aggregate path record
+
+    Keyword Arguments:
+        fps {int} -- target frame per second (default: {1})
+        logger {logme.providers.LogmeLogger} -- logger (default: {None})
+
+    Returns:
+        pd.DataFrame -- path record that downgrade the fps
+    """
+    # simply get the top-n frame in downgrad process
+    df_path['_tmp_check'] = df_path['frame_idx'] % df_path['video_fps']
+    df_path = df_path[df_path['_tmp_check'] < fps].drop(columns=['_tmp_check'])
+    logger.info('downgrade path to fps %d into the shape %s DataFrame', \
+                fps, str(df_path.shape))
+
+    # recalc gid (action clip index)
+    df_path = _add_group_id(df_path, ['video_name', 'block_idx'], 'gid')
+    df_path = df_path[df_path['group_length'] > block_threshold]
+    df_path.block_idx = df_path.gid
+    df_path.drop(columns=['gid', 'group_length'], inplace=True)
+    df_path.video_fps = fps
+    logger.info('filter path by block length %d into the shape %s DataFrame', \
+                block_threshold, str(df_path.shape))
+    return df_path
