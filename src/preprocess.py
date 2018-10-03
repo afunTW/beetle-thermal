@@ -74,7 +74,7 @@ def get_aggregate_path(*path_files, reverse: bool=False, logger=None) -> pd.Data
         df_one_video_path = pd.read_csv(video_path_file)
         if df_paths is None:
             assert len(df_one_video_path.video_fps.unique()) == 1
-            df_one_video_path = _add_group_id(df_one_video_path, ['video_name', 'block_idx'], 'gid')
+            df_one_video_path = _add_group_id(df_one_video_path, ['block_idx'], 'gid')
             df_paths = df_one_video_path
             logger.debug('#%d video, fps=%.2f', vid, df_one_video_path.video_fps.unique()[0])
             continue
@@ -87,23 +87,26 @@ def get_aggregate_path(*path_files, reverse: bool=False, logger=None) -> pd.Data
         assert len(df_paths.video_nframes.unique()) == 1
         base_frame_idx = df_paths.video_nframes.unique()[0]
         df_one_video_path['frame_idx'] += base_frame_idx
-        logger.debug('#%d video, add the base frame idx %d', vid, base_frame_idx)
 
-        # recalc block_idx (action clip index)
-        base_block_idx = max(df_paths.block_idx.unique())
-        df_one_video_path = _add_group_id(df_one_video_path, ['video_name', 'block_idx'], 'gid')
-        df_one_video_path.block_idx += base_block_idx
+        # recalc gid (action clip index)
+        base_gid = max(df_paths.gid.unique())
+        df_one_video_path = _add_group_id(df_one_video_path, ['block_idx'], 'gid')
+        df_one_video_path.gid += base_gid
+        logger.info(df_one_video_path.columns)
 
         # concat the prepared data
         df_paths = pd.concat([df_paths, df_one_video_path])
         df_paths.video_nframes = sum(df_paths.video_nframes.unique())
-        logger.debug('#%d video, total nframes %d', vid, df_paths.video_nframes.unique()[0])
+        logger.debug('#%d video, total #frames %d', vid, df_paths.video_nframes.unique()[0])
     df_paths.block_idx = df_paths.gid
     df_paths.drop(columns=['gid', 'group_length'], inplace=True)
+    logger.debug('#%d video, total #action %d', vid, max(df_paths.block_idx.unique()))
 
     # recalc timestamp
     df_paths.timestamp_ms = df_paths.frame_idx / df_paths.video_fps * 1000
     timestamp_hmsf = df_paths.timestamp_ms.apply(ms_to_hmsf)
     col_timestamp_ms_idx = df_paths.columns.get_loc('timestamp_ms')
     df_paths.insert(col_timestamp_ms_idx, 'timestamp_hmsf', timestamp_hmsf)
+    logger.info('aggregate %d files into the shape %s DataFrame', \
+                len(path_files), str(df_paths.shape))
     return df_paths
