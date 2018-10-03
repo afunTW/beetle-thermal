@@ -1,0 +1,10 @@
+title: beetle-thermal projects
+author: afun
+
+# preprocess.py config
+preprocess:
+  # the target fps should be less than video fps (downgrade only)
+  thermal_fps: 1
+  
+  # a threshold to filter the valid block after downgrade
+  block_length: 3

@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 logme = "*"
 pandas = "*"
+pyyaml = "*"
 
 [dev-packages]
 pylint = "*"

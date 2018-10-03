@@ -18,3 +18,7 @@ def profile(_callable, logger=None):
             _callable.__module__, _callable.__name__, str(cost_time))
         return result
     return wrapped
+
+def check_exist_type(src, type_):
+    """check the value exist and type is correct"""
+    return src and isinstance(src, type_)
